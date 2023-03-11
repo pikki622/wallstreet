@@ -35,11 +35,12 @@ def side_effect(method, *args, **kwargs):
 
         if request.url == stored_url or (stored_regex and re.compile(stored_regex).match(request.url)):
             saved_request = load_file(key, method)
-            if not stored_strict:
+            if (
+                stored_strict
+                and are_equal(request, saved_request)
+                or not stored_strict
+            ):
                 return saved_request
-            else:
-                if are_equal(request, saved_request):
-                    return saved_request
 
 
 def side_effect_get(*args, **kwargs):
@@ -52,7 +53,7 @@ def side_effect_post(*args, **kwargs):
 
 def load_file(filename, method):
     """ Unpickles the response object """
-    with open(abspath('response/%s/%s' % (method, filename)), 'rb') as fileobj:
+    with open(abspath(f'response/{method}/{filename}'), 'rb') as fileobj:
         return pickle.load(fileobj)
 
 get = Mock(side_effect=side_effect_get)
@@ -69,10 +70,10 @@ def dump(request):
     method = request.request.method
 
     i = 1
-    while os.path.exists(abspath('response/%s/response%s.p' % (method, i))):
+    while os.path.exists(abspath(f'response/{method}/response{i}.p')):
         i += 1
-    filename = 'response%s.p' % i
-    with open(abspath('response/%s/%s' % (method, filename)), 'wb') as fileobj:
+    filename = f'response{i}.p'
+    with open(abspath(f'response/{method}/{filename}'), 'wb') as fileobj:
         pickle.dump(request, fileobj)
     return filename
 
@@ -80,7 +81,7 @@ def dump(request):
 def load_map(method):
     """ Loads the map file from disk """
     try:
-        with open(abspath('response/%s/map.json' % method), 'r') as fileobj:
+        with open(abspath(f'response/{method}/map.json'), 'r') as fileobj:
             d = json.load(fileobj)
     except FileNotFoundError:
         d = {}
@@ -91,7 +92,7 @@ def save_map(d, method):
     """ Saves the map file to disk """
     if not d:
         d = {}
-    with open(abspath('response/%s/map.json' % method), 'w') as fileobj:
+    with open(abspath(f'response/{method}/map.json'), 'w') as fileobj:
         json.dump(d, fileobj)
 
 
